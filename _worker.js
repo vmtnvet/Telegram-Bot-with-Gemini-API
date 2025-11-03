@@ -39,46 +39,56 @@ async function handleWebhook(request, env) {
 }
 
 async function getGeminiResponse(apiKey, message) {
-  try {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: message
+  const models = [
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro'
+  ];
+  
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: message
+            }]
           }]
-        }]
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error:', response.status, errorText);
-      return `API错误 (${response.status})`;
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+          return data.candidates[0].content.parts[0].text;
+        }
+      }
+      
+      if (response.status === 429) {
+        continue;
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`${model} Error:`, response.status, errorText);
+        continue;
+      }
+      
+    } catch (error) {
+      console.error(`${model} failed:`, error);
+      continue;
     }
-    
-    const data = await response.json();
-    
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
-    }
-    
-    if (data.error) {
-      console.error('Gemini Error:', data.error);
-      return `错误: ${data.error.message}`;
-    }
-    
-    return '抱歉，我现在无法回答';
-  } catch (error) {
-    console.error('Gemini API Error:', error);
-    return `服务错误: ${error.message}`;
   }
+  
+  return '抱歉，所有模型都暂时不可用，请稍后再试或检查API配额';
 }
 
 async function sendMessage(botToken, chatId, text) {
