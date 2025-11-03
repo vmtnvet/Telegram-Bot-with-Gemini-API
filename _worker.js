@@ -40,28 +40,27 @@ async function handleWebhook(request, env) {
 
 async function getGeminiResponse(apiKey, message) {
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
     
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
       body: JSON.stringify({
         contents: [{
           parts: [{
             text: message
           }]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 2048
-        }
+        }]
       })
     });
     
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gemini API Error:', response.status, errorText);
-      return `API错误 (${response.status})，请检查API密钥是否正确`;
+      return `API错误 (${response.status})`;
     }
     
     const data = await response.json();
@@ -72,7 +71,7 @@ async function getGeminiResponse(apiKey, message) {
     
     if (data.error) {
       console.error('Gemini Error:', data.error);
-      return `Gemini错误: ${data.error.message}`;
+      return `错误: ${data.error.message}`;
     }
     
     return '抱歉，我现在无法回答';
