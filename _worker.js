@@ -20,10 +20,16 @@ async function handleWebhook(request, env) {
     
     if (update.message && update.message.text) {
       const chatId = update.message.chat.id;
+      const userId = update.message.from.id;
       const userMessage = update.message.text;
       
+      if (userId.toString() !== env.ALLOWED_USER_ID) {
+        await sendMessage(env.BOT_TOKEN, chatId, '抱歉，你没有使用权限');
+        return new Response('OK', { status: 200 });
+      }
+      
       if (userMessage === '/start') {
-        await sendMessage(env.BOT_TOKEN, chatId, '你好！我是AI助手，有什么可以帮你的吗？');
+        await sendMessage(env.BOT_TOKEN, chatId, '你好！我是你的私人AI助手');
         return new Response('OK', { status: 200 });
       }
       
