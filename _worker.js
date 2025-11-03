@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -42,14 +40,27 @@ async function handleWebhook(request, env) {
 
 async function getGeminiResponse(apiKey, message) {
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
     
-    const result = await model.generateContent(message);
-    const response = await result.response;
-    const text = response.text();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: message
+          }]
+        }]
+      })
+    });
     
-    return text || '抱歉，我现在无法回答';
+    const data = await response.json();
+    
+    if (data.candidates && data.candidates[0]) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    
+    return '抱歉，我现在无法回答';
   } catch (error) {
     console.error('Gemini API Error:', error);
     return '抱歉，AI服务暂时不可用';
@@ -64,8 +75,7 @@ async function sendMessage(botToken, chatId, text) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      text: text,
-      parse_mode: 'Markdown'
+      text: text
     })
   });
 }
