@@ -40,7 +40,7 @@ async function handleWebhook(request, env) {
 
 async function getGeminiResponse(apiKey, message) {
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -50,20 +50,35 @@ async function getGeminiResponse(apiKey, message) {
           parts: [{
             text: message
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0.9,
+          maxOutputTokens: 2048
+        }
       })
     });
     
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API Error:', response.status, errorText);
+      return `API错误 (${response.status})，请检查API密钥是否正确`;
+    }
+    
     const data = await response.json();
     
-    if (data.candidates && data.candidates[0]) {
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
       return data.candidates[0].content.parts[0].text;
+    }
+    
+    if (data.error) {
+      console.error('Gemini Error:', data.error);
+      return `Gemini错误: ${data.error.message}`;
     }
     
     return '抱歉，我现在无法回答';
   } catch (error) {
     console.error('Gemini API Error:', error);
-    return '抱歉，AI服务暂时不可用';
+    return `服务错误: ${error.message}`;
   }
 }
 
